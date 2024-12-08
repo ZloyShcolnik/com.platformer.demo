@@ -1,0 +1,80 @@
+name: Build, Generate Key, and Sign Cordova Android App
+
+on: push
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Install Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      # Install Cordova
+      - name: Install Cordova
+        run: npm install -g cordova
+
+      # Install Android SDK
+      - name: Install Android SDK
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openjdk-11-jdk wget unzip
+          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O android-sdk.zip
+          unzip android-sdk.zip -d $HOME/android-sdk
+          yes | $HOME/android-sdk/cmdline-tools/bin/sdkmanager --sdk_root=$HOME/android-sdk "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+
+      # Add Android tools to PATH
+      - name: Set up Android environment
+        run: |
+          echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
+          echo "$HOME/android-sdk/build-tools/33.0.2" >> $GITHUB_PATH
+
+      # Build Android App
+      - name: Build Cordova Android
+        env:
+          JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64
+        run: |
+          cordova platform add android
+          cordova build android --release
+
+      # Generate a Keystore dynamically
+      - name: Generate Keystore
+        env:
+          KEYSTORE_PASSWORD: "password123"
+          KEY_ALIAS: "release-key"
+        run: |
+          keytool -genkeypair -v \
+            -keystore release-key.keystore \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -alias $KEY_ALIAS \
+            -storepass $KEYSTORE_PASSWORD \
+            -keypass $KEYSTORE_PASSWORD \
+            -dname "CN=Your Name, OU=Your Unit, O=Your Organization, L=Your City, ST=Your State, C=Your Country"
+
+      # Sign APK
+      - name: Sign APK
+        env:
+          KEYSTORE_PASSWORD: "password123"
+          KEY_ALIAS: "release-key"
+        run: |
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+            -keystore release-key.keystore \
+            -storepass $KEYSTORE_PASSWORD \
+            platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk \
+            $KEY_ALIAS
+
+      # Align the APK
+      - name: Align APK
+        run: |
+          $HOME/android-sdk/build-tools/33.0.2/zipalign -v 4 \
+            platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk \
+            platforms/android/app/build/outputs/apk/release/app-release-signed.apk
