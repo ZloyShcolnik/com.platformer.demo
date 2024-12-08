@@ -1,13 +1,11 @@
 ﻿{
-	"version": 1733617133,
+	"version": 1733619253,
 	"fileList": [
 		"data.js",
 		"c2runtime.js",
 		"jquery-3.4.1.min.js",
 		"offlineClient.js",
-		"images/tilemap.png",
-		"images/sprite-sheet0.png",
-		"images/sprite2-sheet0.png",
+		"images/tiledbackground.png",
 		"icon-16.png",
 		"icon-32.png",
 		"icon-114.png",
