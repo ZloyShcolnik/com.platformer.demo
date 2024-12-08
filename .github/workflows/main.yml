@@ -1,9 +1,6 @@
 name: Build, Generate Key, and Sign Cordova Android App
 
-on:
-  push:
-    branches:
-      - main
+on: push
 
 jobs:
   build-android:
